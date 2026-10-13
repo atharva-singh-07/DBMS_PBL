@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Student Management{% endblock %}
+{% block page_title %}Student Directory & Accounts{% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <!-- Header with Action -->
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">Enrolled Students</h2>
+            <div class="card-subtitle">Manage student accounts, academic details, and portal statuses</div>
+        </div>
+        {% if session.role == 'admin' %}
+        <button class="btn-custom btn-primary-custom" onclick="openModal('addStudentModal')">
+            <i class="bi bi-person-plus-fill me-1"></i> Add New Student
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <form method="GET" action="{{ url_for('students.list_students') }}" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <div style="flex-grow: 1; min-width: 220px; position: relative;">
+            <i class="bi bi-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+            <input type="text" name="search" class="form-control-custom" style="padding-left: 2.2rem;" placeholder="Search by name, roll no, or email..." value="{{ search }}">
+        </div>
+
+        <div style="min-width: 180px;">
+            <select name="dept_id" class="form-control-custom">
+                <option value="">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.dept_id }}" {% if dept_id == dept.dept_id|string %}selected{% endif %}>
+                    {{ dept.dept_code }} — {{ dept.dept_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="min-width: 140px;">
+            <select name="status" class="form-control-custom">
+                <option value="">All Statuses</option>
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn-custom btn-secondary-custom">
+            <i class="bi bi-funnel-fill me-1"></i> Filter
+        </button>
+        {% if search or dept_id or status %}
+        <a href="{{ url_for('students.list_students') }}" class="btn-custom btn-secondary-custom" title="Clear filters">
+            <i class="bi bi-x-circle me-1"></i> Clear
+        </a>
+        {% endif %}
+    </form>
+
+    <!-- Students Table -->
+    <div class="table-responsive-custom">
+        <table class="table-custom filterable-table">
+            <thead>
+                <tr>
+                    <th>Roll Number</th>
+                    <th>Student Name</th>
+                    <th>Email Address</th>
+                    <th>Department</th>
+                    <th>Program & Sem</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    {% if session.role == 'admin' %}
+                    <th style="text-align: right;">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td><strong>{{ student.roll_number }}</strong></td>
+                    <td>
+                        <div style="font-weight: 600;">{{ student.full_name }}</div>
+                    </td>
+                    <td><code>{{ student.email }}</code></td>
+                    <td><span class="badge-custom badge-secondary">{{ student.dept_code }}</span></td>
+                    <td>{{ student.program }} (Sem {{ student.current_semester }})</td>
+                    <td>{{ student.phone or '—' }}</td>
+                    <td>
+                        {% if student.is_active %}
+                        <span class="badge-custom badge-success"><i class="bi bi-check-circle-fill"></i> Active</span>
+                        {% else %}
+                        <span class="badge-custom badge-danger"><i class="bi bi-slash-circle-fill"></i> Inactive</span>
+                        {% endif %}
+                    </td>
+                    {% if session.role == 'admin' %}
+                    <td style="text-align: right;">
+                        <button class="btn-custom btn-secondary-custom" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;" 
+                                onclick="openEditModal({{ student.student_id }}, '{{ student.full_name|escape }}', '{{ student.email|escape }}', {{ student.dept_id }}, '{{ student.program|escape }}', {{ student.current_semester }}, '{{ student.phone or '' }}')">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <form method="POST" action="{{ url_for('students.toggle_status', student_id=student.student_id) }}" style="display: inline;" onsubmit="return confirm('Change status for this student?');">
+                            <button type="submit" class="btn-custom {% if student.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">
+                                {% if student.is_active %}Deactivate{% else %}Activate{% endif %}
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                        <i class="bi bi-search" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;"></i>
+                        No students found matching your criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Student Modal -->
+{% if session.role == 'admin' %}
+<div class="modal-backdrop-custom" id="addStudentModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Add New Student</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('addStudentModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('students.add_student') }}">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Roll Number / Student ID *</label>
+                    <input type="text" name="roll_number" class="form-control-custom" placeholder="e.g. CS-2026-045" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Full Name *</label>
+                    <input type="text" name="full_name" class="form-control-custom" placeholder="e.g. Alex Rivera" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">College Email *</label>
+                    <input type="email" name="email" class="form-control-custom" placeholder="e.g. alex.r@college.edu" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Department *</label>
+                    <select name="dept_id" class="form-control-custom" required>
+                        <option value="">Select Department</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.dept_id }}">{{ dept.dept_code }} — {{ dept.dept_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Degree Program *</label>
+                        <input type="text" name="program" class="form-control-custom" placeholder="e.g. B.Tech Computer Science" value="B.Tech Computer Science" required>
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Current Sem</label>
+                        <input type="number" name="semester" class="form-control-custom" value="1" min="1" max="8">
+                    </div>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Contact Phone</label>
+                    <input type="text" name="phone" class="form-control-custom" placeholder="+1 555-0123">
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Default Password</label>
+                    <input type="text" name="password" class="form-control-custom" value="Password@123" required>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('addStudentModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Save Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal-backdrop-custom" id="editStudentModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Edit Student Profile</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('editStudentModal')">&times;</button>
+        </div>
+        <form method="POST" id="editStudentForm" action="">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Full Name *</label>
+                    <input type="text" id="edit_full_name" name="full_name" class="form-control-custom" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">College Email *</label>
+                    <input type="email" id="edit_email" name="email" class="form-control-custom" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Department *</label>
+                    <select id="edit_dept_id" name="dept_id" class="form-control-custom" required>
+                        {% for dept in departments %}
+                        <option value="{{ dept.dept_id }}">{{ dept.dept_code }} — {{ dept.dept_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 0.75rem;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Program *</label>
+                        <input type="text" id="edit_program" name="program" class="form-control-custom" required>
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Semester</label>
+                        <input type="number" id="edit_semester" name="semester" class="form-control-custom" min="1" max="8">
+                    </div>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Phone</label>
+                    <input type="text" id="edit_phone" name="phone" class="form-control-custom">
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('editStudentModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Update Details</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openEditModal(id, name, email, deptId, prog, sem, phone) {
+        document.getElementById('editStudentForm').action = "/students/edit/" + id;
+        document.getElementById('edit_full_name').value = name;
+        document.getElementById('edit_email').value = email;
+        document.getElementById('edit_dept_id').value = deptId;
+        document.getElementById('edit_program').value = prog;
+        document.getElementById('edit_semester').value = sem;
+        document.getElementById('edit_phone').value = phone;
+        openModal('editStudentModal');
+    }
+</script>
+{% endblock %}

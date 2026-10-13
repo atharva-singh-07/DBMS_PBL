@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Departments{% endblock %}
+{% block page_title %}Academic Departments{% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">College Departments</h2>
+            <div class="card-subtitle">Manage academic branches, code identifiers, and program faculties</div>
+        </div>
+        <button class="btn-custom btn-primary-custom" onclick="openModal('addDeptModal')">
+            <i class="bi bi-plus-lg me-1"></i> Add Department
+        </button>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Department Code</th>
+                    <th>Department Name</th>
+                    <th>Enrolled Students</th>
+                    <th>Faculty Count</th>
+                    <th>Offered Courses</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in departments %}
+                <tr>
+                    <td><span class="badge-custom badge-secondary" style="font-weight: 700; font-size: 0.9rem;">{{ d.dept_code }}</span></td>
+                    <td><strong>{{ d.dept_name }}</strong></td>
+                    <td>{{ d.student_count }} Students</td>
+                    <td>{{ d.faculty_count }} Faculty</td>
+                    <td>{{ d.course_count }} Courses</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">No departments configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Dept Modal -->
+<div class="modal-backdrop-custom" id="addDeptModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Add Academic Department</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('addDeptModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('faculty.departments') }}">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Department Code (Short) *</label>
+                    <input type="text" name="dept_code" class="form-control-custom" placeholder="e.g. AI-DS or ECE" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Department Full Name *</label>
+                    <input type="text" name="dept_name" class="form-control-custom" placeholder="e.g. Artificial Intelligence & Data Science" required>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('addDeptModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Create Department</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

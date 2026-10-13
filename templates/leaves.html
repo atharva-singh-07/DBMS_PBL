@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Management{% endblock %}
+{% block page_title %}Student Leave Applications & Approvals{% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">
+                {% if session.role == 'student' %}My Leave Applications{% else %}Student Leave Approval Requests{% endif %}
+            </h2>
+            <div class="card-subtitle">
+                {% if session.role == 'student' %}
+                Submit official leave requests for medical, academic, or personal circumstances
+                {% else %}
+                Review, approve, or reject student leave requests with audited decision notes
+                {% endif %}
+            </div>
+        </div>
+
+        {% if session.role == 'student' %}
+        <button class="btn-custom btn-primary-custom" onclick="openModal('applyLeaveModal')">
+            <i class="bi bi-file-earmark-plus-fill me-1"></i> Apply for Leave
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Filter by Status -->
+    <form method="GET" action="{{ url_for('leaves.index') }}" style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <div style="min-width: 180px;">
+            <select name="status" class="form-control-custom" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Review</option>
+                <option value="approved" {% if status_filter == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+        {% if status_filter %}
+        <a href="{{ url_for('leaves.index') }}" class="btn-custom btn-secondary-custom">Clear Filter</a>
+        {% endif %}
+    </form>
+
+    <!-- Leaves Table -->
+    <div class="table-responsive-custom">
+        <table class="table-custom filterable-table">
+            <thead>
+                <tr>
+                    <th>App #</th>
+                    {% if session.role in ['admin', 'faculty'] %}
+                    <th>Student Details</th>
+                    {% endif %}
+                    <th>Leave Type</th>
+                    <th>Date Range</th>
+                    <th>Duration</th>
+                    <th>Reason</th>
+                    <th>Document</th>
+                    <th>Decision Status</th>
+                    <th>Reviewer Notes</th>
+                    {% if session.role in ['admin', 'faculty'] %}
+                    <th style="text-align: right;">Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td><strong>#{{ app.application_id }}</strong></td>
+                    {% if session.role in ['admin', 'faculty'] %}
+                    <td>
+                        <div style="font-weight: 600;">{{ app.student_name }}</div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary);">Roll: {{ app.roll_number }} ({{ app.dept_code }})</div>
+                    </td>
+                    {% endif %}
+                    <td><span class="badge-custom badge-secondary">{{ app.type_name }}</span></td>
+                    <td>
+                        <strong>{{ app.start_date|format_date }}</strong> to <strong>{{ app.end_date|format_date }}</strong>
+                    </td>
+                    <td>{{ app.total_days }} {% if app.total_days == 1 %}Day{% else %}Days{% endif %}</td>
+                    <td style="max-width: 250px;">
+                        <div style="font-size: 0.85rem;">{{ app.reason }}</div>
+                    </td>
+                    <td>
+                        {% if app.document_url %}
+                        <a href="{{ url_for('leaves.download_document', filename=app.document_url) }}" target="_blank" class="badge-custom badge-info" style="text-decoration: none;">
+                            <i class="bi bi-paperclip"></i> View Doc
+                        </a>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if app.status == 'approved' %}
+                        <span class="badge-custom badge-success"><i class="bi bi-check-circle-fill"></i> Approved</span>
+                        {% elif app.status == 'rejected' %}
+                        <span class="badge-custom badge-danger"><i class="bi bi-x-circle-fill"></i> Rejected</span>
+                        {% else %}
+                        <span class="badge-custom badge-warning"><i class="bi bi-hourglass-split"></i> Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if app.decision_notes %}
+                        <div style="font-size: 0.8rem; font-style: italic;">"{{ app.decision_notes }}"</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">By {{ app.reviewer_full_name or app.reviewer_name }}</div>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">—</span>
+                        {% endif %}
+                    </td>
+                    {% if session.role in ['admin', 'faculty'] %}
+                    <td style="text-align: right;">
+                        {% if app.status == 'pending' %}
+                        <button class="btn-custom btn-primary-custom" style="padding: 0.25rem 0.7rem; font-size: 0.8rem;"
+                                onclick="openReviewModal({{ app.application_id }}, '{{ app.student_name|escape }}', '{{ app.type_name }}', '{{ app.start_date }}', '{{ app.end_date }}', '{{ app.reason|escape }}')">
+                            <i class="bi bi-check2-square"></i> Review
+                        </button>
+                        {% else %}
+                        <span class="badge-custom badge-secondary" style="font-size: 0.72rem;">Decided</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                        No leave applications found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Apply Leave Modal (Student) -->
+{% if session.role == 'student' %}
+<div class="modal-backdrop-custom" id="applyLeaveModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Submit Leave Application</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('applyLeaveModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('leaves.apply') }}" enctype="multipart/form-data">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Category / Leave Type *</label>
+                    <select name="leave_type_id" class="form-control-custom" required>
+                        <option value="">Select Leave Type</option>
+                        {% for lt in leave_types %}
+                        <option value="{{ lt.leave_type_id }}">{{ lt.type_name }} (Max {{ lt.max_days_per_term }} days/term)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Start Date *</label>
+                        <input type="date" name="start_date" class="form-control-custom" value="{{ today }}" required>
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">End Date *</label>
+                        <input type="date" name="end_date" class="form-control-custom" value="{{ today }}" required>
+                    </div>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Reason for Absence *</label>
+                    <textarea name="reason" class="form-control-custom" rows="3" placeholder="Provide a detailed explanation for your leave request..." required></textarea>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Supporting Document (Optional)</label>
+                    <input type="file" name="document" class="form-control-custom" accept=".png,.jpg,.jpeg,.pdf,.doc,.docx">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+                        Attach doctor's certificate or event invitation (PDF, PNG, JPG). Max 16MB.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('applyLeaveModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Submit Application</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Review Leave Modal (Faculty / Admin) -->
+{% if session.role in ['admin', 'faculty'] %}
+<div class="modal-backdrop-custom" id="reviewLeaveModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Review Leave Application</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('reviewLeaveModal')">&times;</button>
+        </div>
+        <form method="POST" id="reviewLeaveForm" action="">
+            <div class="modal-body-custom">
+                <div style="background: #f8fafc; padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.9rem; font-weight: 600;" id="reviewStudentName">Student Name</div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;" id="reviewDetails">
+                        Leave Type & Dates
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-main); margin-top: 0.5rem; background: #ffffff; padding: 0.5rem; border-radius: 4px; border: 1px solid #e2e8f0;" id="reviewReason">
+                        Reason
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Decision *</label>
+                    <select name="decision" class="form-control-custom" required>
+                        <option value="approved">Approve Application</option>
+                        <option value="rejected">Reject Application</option>
+                    </select>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Decision Notes / Remarks (Optional)</label>
+                    <textarea name="decision_notes" class="form-control-custom" rows="2" placeholder="e.g. Valid certificate verified or Prior notice was insufficient..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('reviewLeaveModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Confirm Decision</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openReviewModal(appId, studentName, typeName, startDate, endDate, reason) {
+        document.getElementById('reviewLeaveForm').action = "/leaves/review/" + appId;
+        document.getElementById('reviewStudentName').textContent = studentName;
+        document.getElementById('reviewDetails').textContent = typeName + " (" + startDate + " to " + endDate + ")";
+        document.getElementById('reviewReason').textContent = "Reason: " + reason;
+        openModal('reviewLeaveModal');
+    }
+</script>
+{% endblock %}

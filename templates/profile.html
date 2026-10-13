@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+{% block page_title %}User Account & Profile Settings{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Profile Info Card -->
+    <div class="card-custom">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">Profile Information</h2>
+                <div class="card-subtitle">Authenticated user credentials and identity</div>
+            </div>
+            <span class="badge-custom badge-secondary role-tag-{{ user.role }}">{{ user.role }}</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="user-avatar" style="width: 58px; height: 58px; font-size: 1.4rem;">
+                {{ user.username[:1]|upper }}
+            </div>
+            <div>
+                <h3 style="font-size: 1.25rem;">{{ profile_data.full_name if profile_data else user.username }}</h3>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">{{ user.email }}</div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Username:</span>
+                <strong>{{ user.username }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Role:</span>
+                <span class="badge-custom badge-secondary">{{ user.role|capitalize }}</span>
+            </div>
+            {% if session.role == 'student' and profile_data %}
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Roll Number:</span>
+                <strong>{{ profile_data.roll_number }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Department:</span>
+                <strong>{{ profile_data.dept_name }} ({{ profile_data.dept_code }})</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Program & Sem:</span>
+                <strong>{{ profile_data.program }} (Sem {{ profile_data.current_semester }})</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Phone:</span>
+                <strong>{{ profile_data.phone or 'Not provided' }}</strong>
+            </div>
+            {% elif session.role == 'faculty' and profile_data %}
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Employee ID:</span>
+                <strong>{{ profile_data.employee_id }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Department:</span>
+                <strong>{{ profile_data.dept_name }} ({{ profile_data.dept_code }})</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Designation:</span>
+                <strong>{{ profile_data.designation }}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Phone:</span>
+                <strong>{{ profile_data.phone or 'Not provided' }}</strong>
+            </div>
+            {% endif %}
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Account Created:</span>
+                <span>{{ user.created_at|format_date }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Card -->
+    <div class="card-custom">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">Security & Password</h2>
+                <div class="card-subtitle">Update your account password securely</div>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.change_password') }}">
+            <div class="form-group-custom">
+                <label class="form-label-custom">Current Password *</label>
+                <input type="password" name="current_password" class="form-control-custom" placeholder="••••••••" required>
+            </div>
+            <div class="form-group-custom">
+                <label class="form-label-custom">New Password *</label>
+                <input type="password" name="new_password" class="form-control-custom" placeholder="At least 6 characters" minlength="6" required>
+            </div>
+            <div class="form-group-custom">
+                <label class="form-label-custom">Confirm New Password *</label>
+                <input type="password" name="confirm_password" class="form-control-custom" placeholder="Repeat new password" minlength="6" required>
+            </div>
+            <button type="submit" class="btn-custom btn-primary-custom" style="width: 100%; margin-top: 0.5rem;">
+                <i class="bi bi-shield-check me-1"></i> Update Password
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Recent Personal Audit Activity -->
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">My Recent Activity Trail</h2>
+            <div class="card-subtitle">Audit logs recorded for your session and actions</div>
+        </div>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Target Entity</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.created_at|format_date }}</td>
+                    <td><span class="badge-custom badge-secondary">{{ log.action }}</span></td>
+                    <td>{{ log.entity_type }} #{{ log.entity_id or '—' }}</td>
+                    <td>{{ log.details }}</td>
+                    <td><code>{{ log.ip_address or '127.0.0.1' }}</code></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No activity recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

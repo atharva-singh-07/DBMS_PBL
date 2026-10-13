@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}SQL Reports & Analytics{% endblock %}
+{% block page_title %}Academic Reports & Analytics Hub{% endblock %}
+
+{% block content %}
+<!-- Reports Hub Navigation Tabs -->
+<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+    <a href="{{ url_for('reports.index', report='student_wise') }}" class="btn-custom {% if report_type == 'student_wise' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-people me-1"></i> 1. Student-wise %
+    </a>
+    <a href="{{ url_for('reports.index', report='course_summary') }}" class="btn-custom {% if report_type == 'course_summary' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-journal-text me-1"></i> 2. Course Summary
+    </a>
+    <a href="{{ url_for('reports.index', report='shortage') }}" class="btn-custom {% if report_type == 'shortage' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> 3. Shortage List (< 75%)
+    </a>
+    <a href="{{ url_for('reports.index', report='leave_history') }}" class="btn-custom {% if report_type == 'leave_history' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-envelope-paper me-1"></i> 4. Leave History
+    </a>
+    <a href="{{ url_for('reports.index', report='pending_leaves') }}" class="btn-custom {% if report_type == 'pending_leaves' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-hourglass-split me-1"></i> 5. Pending Leaves
+    </a>
+    <a href="{{ url_for('reports.index', report='faculty_allocation') }}" class="btn-custom {% if report_type == 'faculty_allocation' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-person-badge me-1"></i> 6. Faculty Allocation
+    </a>
+    <a href="{{ url_for('reports.index', report='makeup_participation') }}" class="btn-custom {% if report_type == 'makeup_participation' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-clock-history me-1"></i> 7. Makeup Participation
+    </a>
+    <a href="{{ url_for('reports.index', report='monthly_trends') }}" class="btn-custom {% if report_type == 'monthly_trends' %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}">
+        <i class="bi bi-graph-up me-1"></i> 8. Monthly Trends
+    </a>
+</div>
+
+<div class="card-custom">
+    <!-- Report Title & Header -->
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">{{ report_title }}</h2>
+            <div class="card-subtitle">{{ report_description }}</div>
+        </div>
+
+        <!-- Export CSV Button -->
+        <a href="{{ url_for('reports.index', report=report_type, dept_id=dept_id, course_id=course_id, threshold=threshold, export='csv') }}" 
+           class="btn-custom btn-secondary-custom" style="font-weight: 600;">
+            <i class="bi bi-file-earmark-spreadsheet-fill text-success me-1"></i> Export to CSV
+        </a>
+    </div>
+
+    <!-- Dynamic Filter Bar -->
+    <form method="GET" action="{{ url_for('reports.index') }}" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <input type="hidden" name="report" value="{{ report_type }}">
+
+        {% if report_type in ['student_wise', 'course_summary', 'shortage', 'leave_history', 'pending_leaves', 'faculty_allocation'] %}
+        <div style="min-width: 200px;">
+            <select name="dept_id" class="form-control-custom">
+                <option value="">All Departments</option>
+                {% for d in departments %}
+                <option value="{{ d.dept_id }}" {% if dept_id == d.dept_id|string %}selected{% endif %}>
+                    {{ d.dept_code }} — {{ d.dept_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        {% if report_type == 'student_wise' %}
+        <div style="min-width: 200px;">
+            <select name="course_id" class="form-control-custom">
+                <option value="">All Courses</option>
+                {% for c in courses %}
+                <option value="{{ c.course_id }}" {% if course_id == c.course_id|string %}selected{% endif %}>
+                    {{ c.course_code }} — {{ c.course_title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        {% if report_type == 'shortage' %}
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label class="form-label-custom" style="margin: 0; white-space: nowrap;">Threshold (%):</label>
+            <input type="number" name="threshold" class="form-control-custom" style="width: 90px;" value="{{ threshold }}" min="1" max="100" step="0.5">
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn-custom btn-secondary-custom">
+            <i class="bi bi-filter me-1"></i> Apply Filter
+        </button>
+
+        {% if dept_id or course_id or (report_type == 'shortage' and threshold != default_threshold) %}
+        <a href="{{ url_for('reports.index', report=report_type) }}" class="btn-custom btn-secondary-custom">Reset</a>
+        {% endif %}
+    </form>
+
+    <!-- Report Table -->
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    {% for key, label in columns %}
+                    <th>{{ label }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    {% for key, label in columns %}
+                    <td>
+                        {% if 'percentage' in key or 'pct' in key %}
+                            <span style="font-weight: 700; color: {% if row[key]|float >= default_threshold %}var(--success){% else %}var(--danger){% endif %};">
+                                {{ row[key] }}%
+                            </span>
+                        {% elif key == 'decision_status' or key == 'status' %}
+                            <span class="badge-custom {% if row[key] in ['approved', 'completed', 'active', 'present'] %}badge-success{% elif row[key] in ['rejected', 'cancelled', 'absent'] %}badge-danger{% else %}badge-warning{% endif %}">
+                                {{ row[key] }}
+                            </span>
+                        {% elif key == 'classes_shortfall' %}
+                            <span class="badge-custom badge-danger"><strong>{{ row[key] }}</strong> Classes</span>
+                        {% else %}
+                            {{ row[key] if row[key] is not none else '—' }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ columns|length }}" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                        <i class="bi bi-inbox" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;"></i>
+                        No records match the current report criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 1rem; font-size: 0.78rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+        <span>Showing {{ data|length }} results</span>
+        <span>Generated from AttendEase SQL Database Query Engine</span>
+    </div>
+</div>
+{% endblock %}

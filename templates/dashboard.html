@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Academic Overview Dashboard{% endblock %}
+
+{% block content %}
+<!-- Student Shortage Alert Banner (If Applicable) -->
+{% if session.role == 'student' and active_alerts %}
+    {% for alert in active_alerts %}
+    <div class="shortage-banner">
+        <div class="shortage-banner-icon">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <div style="flex-grow: 1;">
+            <div style="font-weight: 700; color: #991b1b; font-size: 1.05rem;">
+                ATTENDANCE SHORTAGE WARNING: {{ alert.course_code }} — {{ alert.course_title }}
+            </div>
+            <p style="font-size: 0.88rem; color: #7f1d1d; margin-top: 0.25rem;">
+                Your current attendance is <strong>{{ alert.current_percentage }}%</strong> in section <strong>{{ alert.section_name }}</strong>, which is below the mandatory college threshold of <strong>{{ alert.threshold_percentage }}%</strong>.
+                You have attended {{ alert.classes_attended }} and missed {{ alert.classes_missed }} classes. Please consult your instructor or attend scheduled makeup classes.
+            </p>
+        </div>
+        <div>
+            <a href="{{ url_for('attendance.my_attendance') }}" class="btn-custom btn-secondary-custom" style="white-space: nowrap; font-size: 0.85rem;">
+                View Details
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<!-- ======================================================================== -->
+<!-- 1. KPI STATS CARDS -->
+<!-- ======================================================================== -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
+    {% if session.role == 'admin' %}
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-indigo"><i class="bi bi-people-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Active Students</div>
+                <div class="kpi-value">{{ stats.total_students }}</div>
+                <div class="kpi-subtext">Enrolled across college</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-info"><i class="bi bi-person-badge-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Faculty Staff</div>
+                <div class="kpi-value">{{ stats.total_faculty }}</div>
+                <div class="kpi-subtext">Teaching personnel</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-success"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">College Avg Attendance</div>
+                <div class="kpi-value">{{ stats.overall_avg_attendance }}%</div>
+                <div class="kpi-subtext">Min required: {{ default_threshold }}%</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Below {{ default_threshold }}% Threshold</div>
+                <div class="kpi-value">{{ stats.shortage_count }}</div>
+                <div class="kpi-subtext">Students in shortage list</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-warning"><i class="bi bi-envelope-paper-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Pending Leaves</div>
+                <div class="kpi-value">{{ stats.pending_leaves }}</div>
+                <div class="kpi-subtext">Awaiting review</div>
+            </div>
+        </div>
+
+    {% elif session.role == 'faculty' %}
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-indigo"><i class="bi bi-diagram-3-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Assigned Sections</div>
+                <div class="kpi-value">{{ stats.assigned_sections }}</div>
+                <div class="kpi-subtext">Active academic sections</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-info"><i class="bi bi-people-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Enrolled Students</div>
+                <div class="kpi-value">{{ stats.enrolled_students }}</div>
+                <div class="kpi-subtext">Across your sections</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-success"><i class="bi bi-bar-chart-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Your Sections Avg Att.</div>
+                <div class="kpi-value">{{ stats.avg_attendance }}%</div>
+                <div class="kpi-subtext">Conducted lectures average</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-danger"><i class="bi bi-shield-exclamation"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Active Shortages</div>
+                <div class="kpi-value">{{ stats.active_shortages }}</div>
+                <div class="kpi-subtext">Students below {{ default_threshold }}%</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-warning"><i class="bi bi-envelope-paper-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Pending Leaves</div>
+                <div class="kpi-value">{{ stats.pending_leaves }}</div>
+                <div class="kpi-subtext">Waiting for your approval</div>
+            </div>
+        </div>
+
+    {% elif session.role == 'student' %}
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper {% if stats.overall_percentage >= default_threshold %}kpi-success{% else %}kpi-danger{% endif %}">
+                <i class="bi bi-pie-chart-fill"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Overall Attendance</div>
+                <div class="kpi-value">{{ stats.overall_percentage }}%</div>
+                <div class="kpi-subtext">Required: &ge; {{ default_threshold }}%</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-success"><i class="bi bi-check-lg"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Attended Classes</div>
+                <div class="kpi-value">{{ stats.total_present }}</div>
+                <div class="kpi-subtext">Out of {{ stats.total_counted }} counted sessions</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-danger"><i class="bi bi-x-lg"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Missed Classes</div>
+                <div class="kpi-value">{{ stats.total_absent }}</div>
+                <div class="kpi-subtext">Unexcused absences</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon-wrapper kpi-warning"><i class="bi bi-heart-pulse-fill"></i></div>
+            <div class="kpi-content">
+                <div class="kpi-label">Approved Leaves</div>
+                <div class="kpi-value">{{ stats.total_leave }}</div>
+                <div class="kpi-subtext">Official leave records</div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- ======================================================================== -->
+<!-- 2. CHARTS & QUICK ACTIONS SECTION -->
+<!-- ======================================================================== -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.75rem;">
+    <!-- Chart Card -->
+    <div class="card-custom">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">
+                    {% if session.role == 'admin' %}
+                    Institutional Attendance Trend
+                    {% elif session.role == 'faculty' %}
+                    Attendance by Assigned Section
+                    {% else %}
+                    My Course-wise Attendance (%)
+                    {% endif %}
+                </h2>
+                <div class="card-subtitle">
+                    Live analytics derived from recorded class sessions
+                </div>
+            </div>
+            <span class="badge-custom badge-secondary">Live Metrics</span>
+        </div>
+
+        <div style="position: relative; height: 280px; width: 100%;">
+            {% if session.role == 'admin' %}
+            <canvas id="attendanceTrendChart"></canvas>
+            {% elif session.role == 'faculty' %}
+            <canvas id="facultySectionsChart"></canvas>
+            {% else %}
+            <canvas id="studentCoursesChart"></canvas>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Shortcuts Card -->
+    <div class="card-custom">
+        <div class="card-header-flex">
+            <div>
+                <h2 class="card-title">Quick Actions</h2>
+                <div class="card-subtitle">Frequent workflows</div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for item in shortcuts %}
+            <a href="{{ item.url }}" class="btn-custom btn-secondary-custom" style="justify-content: flex-start; padding: 0.85rem 1rem;">
+                <i class="bi {{ item.icon }} text-primary me-2" style="font-size: 1.15rem;"></i>
+                <span style="font-weight: 500;">{{ item.title }}</span>
+                <i class="bi bi-chevron-right ms-auto text-muted"></i>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================================== -->
+<!-- 3. ROLE-SPECIFIC TABLES & RECENT ACTIVITY -->
+<!-- ======================================================================== -->
+{% if session.role == 'student' %}
+<!-- Student Course Attendance Summary Table -->
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">Enrolled Courses & Attendance Status</h2>
+            <div class="card-subtitle">Course breakdown calculating: (Present / Total Counted) &times; 100</div>
+        </div>
+        <a href="{{ url_for('attendance.my_attendance') }}" class="btn-custom btn-outline-indigo" style="font-size: 0.82rem; padding: 0.35rem 0.75rem;">
+            View Detailed History <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Course</th>
+                    <th>Section</th>
+                    <th>Faculty</th>
+                    <th>Counted Classes</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Leave</th>
+                    <th>Attendance %</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in student_courses %}
+                <tr>
+                    <td>
+                        <strong>{{ course.course_code }}</strong>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary);">{{ course.course_title }}</div>
+                    </td>
+                    <td>{{ course.section_name }}</td>
+                    <td>{{ course.faculty_name }}</td>
+                    <td>{{ course.total_counted_classes }}</td>
+                    <td class="text-success font-weight-bold">{{ course.present_count }}</td>
+                    <td class="text-danger font-weight-bold">{{ course.absent_count }}</td>
+                    <td class="text-warning font-weight-bold">{{ course.leave_count }}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="flex-grow: 1; height: 6px; background: #e2e8f0; border-radius: 3px; max-width: 80px; overflow: hidden;">
+                                <div style="height: 100%; width: {{ course.attendance_percentage }}%; background: {% if course.attendance_percentage >= default_threshold %}var(--success){% else %}var(--danger){% endif %};"></div>
+                            </div>
+                            <span style="font-weight: 700;">{{ course.attendance_percentage }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        {% if course.attendance_percentage >= default_threshold %}
+                        <span class="badge-custom badge-success"><i class="bi bi-check-circle-fill"></i> Safe</span>
+                        {% else %}
+                        <span class="badge-custom badge-danger"><i class="bi bi-exclamation-triangle-fill"></i> Shortage</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No course enrollments found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% elif session.role in ['admin', 'faculty'] %}
+<!-- Recent Activity Log / Sessions -->
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">
+                {% if session.role == 'admin' %}System Audit & Activity Trail{% else %}Recently Conducted Lectures{% endif %}
+            </h2>
+            <div class="card-subtitle">Real-time log of database events and lecture submissions</div>
+        </div>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    {% if session.role == 'admin' %}
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                    {% else %}
+                    <th>Date</th>
+                    <th>Course & Section</th>
+                    <th>Topic</th>
+                    <th>Type</th>
+                    <th>Marked Students</th>
+                    <th>Present</th>
+                    <th>Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% if session.role == 'admin' %}
+                    {% for log in recent_activity %}
+                    <tr>
+                        <td style="white-space: nowrap;">{{ log.created_at|format_date }}</td>
+                        <td><strong>{{ log.username or 'System' }}</strong> ({{ log.role or 'system' }})</td>
+                        <td><span class="badge-custom badge-secondary">{{ log.action }}</span></td>
+                        <td>{{ log.entity_type }} #{{ log.entity_id or '—' }}</td>
+                        <td>{{ log.details }}</td>
+                        <td><code>{{ log.ip_address or '127.0.0.1' }}</code></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No recent audit activity.</td></tr>
+                    {% endfor %}
+                {% else %}
+                    {% for session_item in recent_activity %}
+                    <tr>
+                        <td>{{ session_item.session_date|format_date }}</td>
+                        <td><strong>{{ session_item.course_code }}</strong> ({{ session_item.section_name }})</td>
+                        <td>{{ session_item.topic or 'Lecture' }}</td>
+                        <td><span class="badge-custom badge-info">{{ session_item.session_type }}</span></td>
+                        <td>{{ session_item.marked_count }}</td>
+                        <td class="text-success font-weight-bold">{{ session_item.present_count }}</td>
+                        <td>
+                            <a href="{{ url_for('attendance.mark_attendance', session_id=session_item.session_id) }}" class="btn-custom btn-secondary-custom" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;">
+                                Edit Attendance
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No recent lectures found.</td></tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Embed JSON chart data safely
+    window.dashboardChartData = {{ chart_data|safe }};
+</script>
+{% endblock %}

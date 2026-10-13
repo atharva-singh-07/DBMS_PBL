@@ -1,0 +1,33 @@
+# Environment variables (sensitive credentials)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pycache
+
+# Uploads (user-uploaded files)
+uploads/
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp Word files
+~$*.docx
+~$*.xlsx
+
+# Byte-compiled / optimized files
+*.py[cod]
+*$py.class

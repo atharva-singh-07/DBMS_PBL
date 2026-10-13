@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Record Makeup Attendance — {{ makeup.course_code }}{% endblock %}
+{% block page_title %}Makeup Attendance: {{ makeup.course_code }} ({{ makeup.section_name }}){% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <div style="margin-bottom: 0.35rem;">
+                <a href="{{ url_for('makeup.index') }}" class="btn-custom btn-secondary-custom" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Makeup List
+                </a>
+            </div>
+            <h2 class="card-title">{{ makeup.course_code }}: {{ makeup.topic }}</h2>
+            <div class="card-subtitle">
+                Section: <strong>{{ makeup.section_name }}</strong> &bull;
+                Date: <strong>{{ makeup.session_date|format_date }}</strong> ({{ makeup.start_time|format_time }} – {{ makeup.end_time|format_time }}) &bull;
+                Classroom: <code>{{ makeup.classroom }}</code> &bull;
+                Instructor: {{ makeup.faculty_name }}
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('makeup.mark', makeup_id=makeup.makeup_id) }}">
+        <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.88rem; font-weight: 600;">
+                Check students who attended this makeup session:
+            </div>
+            <button type="button" class="btn-custom btn-secondary-custom" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;" onclick="toggleAllMakeup(true)">
+                Check All
+            </button>
+        </div>
+
+        <div class="table-responsive-custom">
+            <table class="table-custom">
+                <thead>
+                    <tr>
+                        <th style="width: 45px;">Attended</th>
+                        <th>Roll Number</th>
+                        <th>Student Name</th>
+                        <th>Department</th>
+                        <th>Previous Recorded Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in students %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="attended_students" value="{{ s.student_id }}" class="makeup-checkbox"
+                                   style="width: 18px; height: 18px; cursor: pointer;"
+                                   {% if s.makeup_status == 'present' %}checked{% endif %}>
+                        </td>
+                        <td><strong>{{ s.roll_number }}</strong></td>
+                        <td><div style="font-weight: 600;">{{ s.full_name }}</div></td>
+                        <td><span class="badge-custom badge-secondary">{{ s.dept_code }}</span></td>
+                        <td>
+                            {% if s.makeup_status == 'present' %}
+                            <span class="badge-custom badge-success"><i class="bi bi-check-lg"></i> Present</span>
+                            {% elif s.makeup_status == 'absent' %}
+                            <span class="badge-custom badge-danger"><i class="bi bi-x-lg"></i> Absent</span>
+                            {% else %}
+                            <span class="badge-custom badge-secondary">Not Marked</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">No students enrolled in this section.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if students %}
+        <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <a href="{{ url_for('makeup.index') }}" class="btn-custom btn-secondary-custom">Cancel</a>
+            <button type="submit" class="btn-custom btn-primary-custom" style="padding: 0.65rem 1.75rem;">
+                <i class="bi bi-check2-circle me-1"></i> Save Makeup Attendance
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function toggleAllMakeup(val) {
+        document.querySelectorAll('.makeup-checkbox').forEach(cb => cb.checked = val);
+    }
+</script>
+{% endblock %}

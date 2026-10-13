@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Makeup Sessions{% endblock %}
+{% block page_title %}Makeup & Attendance Recovery Sessions{% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">Makeup Lecture Sessions</h2>
+            <div class="card-subtitle">
+                Scheduled supplementary sessions organized for syllabus completion and attendance recovery
+            </div>
+        </div>
+
+        {% if session.role in ['admin', 'faculty'] %}
+        <button class="btn-custom btn-primary-custom" onclick="openModal('scheduleMakeupModal')">
+            <i class="bi bi-calendar2-plus-fill me-1"></i> Schedule Makeup Class
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Table of Makeup Sessions -->
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Course & Section</th>
+                    <th>Instructor</th>
+                    <th>Topic / Coverage</th>
+                    <th>Classroom</th>
+                    <th>Status</th>
+                    {% if session.role == 'student' %}
+                    <th>Your Attendance</th>
+                    {% else %}
+                    <th>Attendance Marked</th>
+                    <th style="text-align: right;">Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in makeups %}
+                <tr>
+                    <td>
+                        <strong>{{ m.session_date|format_date }}</strong>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            {{ m.start_time|format_time }} – {{ m.end_time|format_time }}
+                        </div>
+                    </td>
+                    <td>
+                        <strong>{{ m.course_code }}</strong> ({{ m.section_name }})
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ m.course_title }}</div>
+                    </td>
+                    <td>{{ m.faculty_name }}</td>
+                    <td><strong>{{ m.topic }}</strong></td>
+                    <td><code>{{ m.classroom }}</code></td>
+                    <td>
+                        {% if m.status == 'scheduled' %}
+                        <span class="badge-custom badge-warning"><i class="bi bi-calendar-event"></i> Scheduled</span>
+                        {% elif m.status == 'completed' %}
+                        <span class="badge-custom badge-success"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                        {% else %}
+                        <span class="badge-custom badge-danger">Cancelled</span>
+                        {% endif %}
+                    </td>
+
+                    {% if session.role == 'student' %}
+                    <td>
+                        {% if m.my_attendance_status == 'present' %}
+                        <span class="badge-custom badge-success"><i class="bi bi-check-lg"></i> Attended</span>
+                        {% elif m.my_attendance_status == 'absent' %}
+                        <span class="badge-custom badge-danger"><i class="bi bi-x-lg"></i> Missed</span>
+                        {% else %}
+                        <span class="badge-custom badge-secondary">Upcoming / Not Marked</span>
+                        {% endif %}
+                    </td>
+                    {% else %}
+                    <td>
+                        <strong>{{ m.present_count or 0 }}</strong> Attended (out of {{ m.total_enrolled }} enrolled)
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('makeup.mark', makeup_id=m.makeup_id) }}" class="btn-custom btn-secondary-custom" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;">
+                            <i class="bi bi-person-check-fill me-1"></i> Record Attendance
+                        </a>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                        No makeup sessions scheduled.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Schedule Makeup Modal -->
+{% if session.role in ['admin', 'faculty'] %}
+<div class="modal-backdrop-custom" id="scheduleMakeupModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Schedule Makeup Session</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('scheduleMakeupModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('makeup.create') }}">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Target Course Section *</label>
+                    <select name="section_id" class="form-control-custom" required>
+                        <option value="">Select Section</option>
+                        {% for sec in sections %}
+                        <option value="{{ sec.section_id }}">
+                            {{ sec.course_code }} ({{ sec.section_name }}) — {{ sec.course_title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Makeup Session Date *</label>
+                    <input type="date" name="session_date" class="form-control-custom" value="{{ today }}" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Start Time *</label>
+                        <input type="time" name="start_time" class="form-control-custom" value="14:00" required>
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">End Time *</label>
+                        <input type="time" name="end_time" class="form-control-custom" value="15:30" required>
+                    </div>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Classroom / Lab Venue *</label>
+                    <input type="text" name="classroom" class="form-control-custom" placeholder="e.g. Lab 2 or LH-101" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Topic / Scope of Session *</label>
+                    <input type="text" name="topic" class="form-control-custom" placeholder="e.g. SQL Hands-on Lab & Normalization Review" required>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('scheduleMakeupModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Schedule Session</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

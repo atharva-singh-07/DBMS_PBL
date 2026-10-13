@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Class Attendance{% endblock %}
+{% block page_title %}Class Sessions & Attendance Hub{% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">Conducted Class Sessions</h2>
+            <div class="card-subtitle">Manage class lecture logs and record verified attendance</div>
+        </div>
+        <button class="btn-custom btn-primary-custom" onclick="openModal('createSessionModal')">
+            <i class="bi bi-calendar-plus me-1"></i> Create Class Session
+        </button>
+    </div>
+
+    <!-- Section Filter -->
+    <form method="GET" action="{{ url_for('attendance.index') }}" style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem;">
+        <div style="min-width: 250px;">
+            <select name="section_id" class="form-control-custom" onchange="this.form.submit()">
+                <option value="">All Course Sections</option>
+                {% for sec in available_sections %}
+                <option value="{{ sec.section_id }}" {% if selected_section == sec.section_id|string %}selected{% endif %}>
+                    {{ sec.course_code }} ({{ sec.section_name }}) — {{ sec.course_title }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if selected_section %}
+        <a href="{{ url_for('attendance.index') }}" class="btn-custom btn-secondary-custom">Clear Filter</a>
+        {% endif %}
+    </form>
+
+    <!-- Sessions List -->
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Course & Section</th>
+                    <th>Instructor</th>
+                    <th>Topic / Lecture</th>
+                    <th>Type</th>
+                    <th>Marked / Enrolled</th>
+                    <th>Attendance Summary</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>
+                        <strong>{{ s.session_date|format_date }}</strong>
+                        <div style="font-size: 0.78rem; color: var(--text-muted);">
+                            {{ s.start_time|format_time }} – {{ s.end_time|format_time }}
+                        </div>
+                    </td>
+                    <td>
+                        <strong>{{ s.course_code }}</strong> ({{ s.section_name }})
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ s.course_title }}</div>
+                    </td>
+                    <td>{{ s.faculty_name }}</td>
+                    <td>{{ s.topic or 'Regular Class' }}</td>
+                    <td>
+                        <span class="badge-custom {% if s.session_type == 'lab' %}badge-warning{% elif s.session_type == 'extra' %}badge-info{% else %}badge-secondary{% endif %}">
+                            {{ s.session_type }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>{{ s.marked_students }}</strong> / {{ s.total_enrolled }}
+                        {% if s.marked_students == 0 %}
+                        <span class="badge-custom badge-warning" style="font-size: 0.68rem; padding: 0.1rem 0.35rem;">Unmarked</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; font-size: 0.82rem;">
+                            <span class="text-success" title="Present"><strong>{{ s.present_count or 0 }}</strong> P</span>
+                            <span class="text-danger" title="Absent"><strong>{{ s.absent_count or 0 }}</strong> A</span>
+                            <span class="text-warning" title="Leave"><strong>{{ s.leave_count or 0 }}</strong> L</span>
+                        </div>
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('attendance.mark_attendance', session_id=s.session_id) }}" class="btn-custom {% if s.marked_students == 0 %}btn-primary-custom{% else %}btn-secondary-custom{% endif %}" style="padding: 0.28rem 0.75rem; font-size: 0.82rem;">
+                            <i class="bi bi-pencil-square me-1"></i> {% if s.marked_students == 0 %}Mark Attendance{% else %}Edit Attendance{% endif %}
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">No class sessions found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Session Modal -->
+<div class="modal-backdrop-custom" id="createSessionModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Create Class Session</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('createSessionModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('attendance.create_session') }}">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Target Course Section *</label>
+                    <select name="section_id" class="form-control-custom" required>
+                        <option value="">Select Section</option>
+                        {% for sec in available_sections %}
+                        <option value="{{ sec.section_id }}">
+                            {{ sec.course_code }} ({{ sec.section_name }}) — {{ sec.course_title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Session Date *</label>
+                    <input type="date" name="session_date" class="form-control-custom" value="{{ today }}" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">Start Time *</label>
+                        <input type="time" name="start_time" class="form-control-custom" value="09:00" required>
+                    </div>
+                    <div class="form-group-custom">
+                        <label class="form-label-custom">End Time *</label>
+                        <input type="time" name="end_time" class="form-control-custom" value="10:00" required>
+                    </div>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Lecture Topic / Syllabus Unit</label>
+                    <input type="text" name="topic" class="form-control-custom" placeholder="e.g. Relational Calculus & SQL Joins">
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Session Type</label>
+                    <select name="session_type" class="form-control-custom">
+                        <option value="regular">Regular Lecture</option>
+                        <option value="extra">Extra / Remedial Class</option>
+                        <option value="lab">Practical / Laboratory</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('createSessionModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Create & Proceed to Mark</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

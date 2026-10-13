@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Faculty Management{% endblock %}
+{% block page_title %}Faculty Roster & Department Allocation{% endblock %}
+
+{% block content %}
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">Teaching Staff</h2>
+            <div class="card-subtitle">Manage faculty profiles, designations, and department affiliations</div>
+        </div>
+        <button class="btn-custom btn-primary-custom" onclick="openModal('addFacultyModal')">
+            <i class="bi bi-person-plus-fill me-1"></i> Add Faculty Member
+        </button>
+    </div>
+
+    <!-- Search & Filter -->
+    <form method="GET" action="{{ url_for('faculty.list_faculty') }}" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+        <div style="flex-grow: 1; min-width: 220px; position: relative;">
+            <i class="bi bi-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+            <input type="text" name="search" class="form-control-custom" style="padding-left: 2.2rem;" placeholder="Search faculty name, ID, email..." value="{{ search }}">
+        </div>
+
+        <div style="min-width: 200px;">
+            <select name="dept_id" class="form-control-custom">
+                <option value="">All Departments</option>
+                {% for dept in departments %}
+                <option value="{{ dept.dept_id }}" {% if dept_id == dept.dept_id|string %}selected{% endif %}>
+                    {{ dept.dept_code }} — {{ dept.dept_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn-custom btn-secondary-custom">
+            <i class="bi bi-funnel-fill me-1"></i> Filter
+        </button>
+        {% if search or dept_id %}
+        <a href="{{ url_for('faculty.list_faculty') }}" class="btn-custom btn-secondary-custom">Clear</a>
+        {% endif %}
+    </form>
+
+    <!-- Faculty Table -->
+    <div class="table-responsive-custom">
+        <table class="table-custom filterable-table">
+            <thead>
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Faculty Name</th>
+                    <th>Email Address</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Active Sections</th>
+                    <th>Phone</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in faculty %}
+                <tr>
+                    <td><strong>{{ f.employee_id }}</strong></td>
+                    <td>
+                        <div style="font-weight: 600;">{{ f.full_name }}</div>
+                    </td>
+                    <td><code>{{ f.email }}</code></td>
+                    <td><span class="badge-custom badge-secondary">{{ f.dept_code }}</span></td>
+                    <td>{{ f.designation }}</td>
+                    <td>
+                        <span class="badge-custom badge-info">{{ f.active_sections_count }} Sections</span>
+                    </td>
+                    <td>{{ f.phone or '—' }}</td>
+                    <td style="text-align: right;">
+                        <button class="btn-custom btn-secondary-custom" style="padding: 0.25rem 0.65rem; font-size: 0.8rem;"
+                                onclick="openEditFacultyModal({{ f.faculty_id }}, '{{ f.full_name|escape }}', '{{ f.email|escape }}', {{ f.dept_id }}, '{{ f.designation|escape }}', '{{ f.phone or '' }}')">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+                        No faculty members found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Faculty Modal -->
+<div class="modal-backdrop-custom" id="addFacultyModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Add Faculty Member</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('addFacultyModal')">&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('faculty.add_faculty') }}">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Employee ID *</label>
+                    <input type="text" name="employee_id" class="form-control-custom" placeholder="e.g. FAC-CSE-004" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Full Name *</label>
+                    <input type="text" name="full_name" class="form-control-custom" placeholder="e.g. Dr. John von Neumann" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Email Address *</label>
+                    <input type="email" name="email" class="form-control-custom" placeholder="e.g. john.v@college.edu" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Department *</label>
+                    <select name="dept_id" class="form-control-custom" required>
+                        <option value="">Select Department</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.dept_id }}">{{ dept.dept_code }} — {{ dept.dept_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Academic Designation</label>
+                    <select name="designation" class="form-control-custom">
+                        <option value="Professor">Professor</option>
+                        <option value="Associate Professor">Associate Professor</option>
+                        <option value="Assistant Professor" selected>Assistant Professor</option>
+                        <option value="Lecturer">Lecturer</option>
+                    </select>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Phone</label>
+                    <input type="text" name="phone" class="form-control-custom" placeholder="+1 555-0199">
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Default Password</label>
+                    <input type="text" name="password" class="form-control-custom" value="Password@123" required>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('addFacultyModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Save Faculty</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Faculty Modal -->
+<div class="modal-backdrop-custom" id="editFacultyModal">
+    <div class="modal-dialog-custom">
+        <div class="modal-header-custom">
+            <h3 class="brand-font" style="font-size: 1.15rem;">Edit Faculty Profile</h3>
+            <button class="btn-custom btn-secondary-custom" style="padding: 0.2rem 0.5rem;" onclick="closeModal('editFacultyModal')">&times;</button>
+        </div>
+        <form method="POST" id="editFacultyForm" action="">
+            <div class="modal-body-custom">
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Full Name *</label>
+                    <input type="text" id="edit_fac_name" name="full_name" class="form-control-custom" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Email Address *</label>
+                    <input type="email" id="edit_fac_email" name="email" class="form-control-custom" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Department *</label>
+                    <select id="edit_fac_dept_id" name="dept_id" class="form-control-custom" required>
+                        {% for dept in departments %}
+                        <option value="{{ dept.dept_id }}">{{ dept.dept_code }} — {{ dept.dept_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Designation *</label>
+                    <input type="text" id="edit_fac_desig" name="designation" class="form-control-custom" required>
+                </div>
+                <div class="form-group-custom">
+                    <label class="form-label-custom">Phone</label>
+                    <input type="text" id="edit_fac_phone" name="phone" class="form-control-custom">
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-custom btn-secondary-custom" onclick="closeModal('editFacultyModal')">Cancel</button>
+                <button type="submit" class="btn-custom btn-primary-custom">Update Faculty</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openEditFacultyModal(id, name, email, deptId, desig, phone) {
+        document.getElementById('editFacultyForm').action = "/faculty/edit/" + id;
+        document.getElementById('edit_fac_name').value = name;
+        document.getElementById('edit_fac_email').value = email;
+        document.getElementById('edit_fac_dept_id').value = deptId;
+        document.getElementById('edit_fac_desig').value = desig;
+        document.getElementById('edit_fac_phone').value = phone;
+        openModal('editFacultyModal');
+    }
+</script>
+{% endblock %}

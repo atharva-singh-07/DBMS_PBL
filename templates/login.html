@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — AttendEase Academic Portal</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+        }
+
+        .auth-container {
+            max-width: 440px;
+            width: 100%;
+        }
+
+        .auth-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-top: 3px solid #0f172a;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            padding: 2rem;
+        }
+
+        .inst-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        .portal-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.2rem;
+        }
+
+        .portal-desc {
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Native Segmented Control */
+        .role-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 6px;
+            gap: 2px;
+            margin-bottom: 1.25rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .role-tab {
+            padding: 0.45rem 0.2rem;
+            border: none;
+            background: transparent;
+            font-size: 0.74rem;
+            font-weight: 500;
+            color: #64748b;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+
+        .role-tab.active {
+            background: #ffffff;
+            color: #0f172a;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
+
+        .status-strip {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.78rem;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .demo-pill {
+            padding: 0.45rem 0.65rem;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            border-radius: 6px;
+            font-size: 0.76rem;
+            font-weight: 500;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .demo-pill:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 1.25rem;
+            font-size: 0.74rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Institutional Header -->
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+                <div style="width: 40px; height: 40px; background: #0f172a; border-radius: 6px; color: #ffffff; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto; font-size: 1.2rem;">
+                    <i class="bi bi-mortarboard"></i>
+                </div>
+                <div class="inst-label">Woxsen University &bull; School of Technology</div>
+                <h1 class="portal-title">AttendEase Portal</h1>
+                <p class="portal-desc">Student Attendance & Leave Approval Management</p>
+            </div>
+
+            <!-- Flash Notifications -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div style="margin-bottom: 1rem;">
+                        {% for category, message in messages %}
+                            <div class="badge-custom badge-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else 'warning') }}" 
+                                 style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.35rem; display: flex;">
+                                <i class="bi bi-info-circle me-1"></i> {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Role Selector Tabs -->
+            <div class="role-tabs">
+                <button type="button" class="role-tab active" id="tabAdmin" onclick="setRole('admin', 'Password@123', this)">
+                    Admin
+                </button>
+                <button type="button" class="role-tab" id="tabFaculty" onclick="setRole('prof_alan', 'Password@123', this)">
+                    Faculty
+                </button>
+                <button type="button" class="role-tab" id="tabStudent" onclick="setRole('alex_rivera', 'Password@123', this)">
+                    Student
+                </button>
+                <button type="button" class="role-tab" id="tabShortage" onclick="setRole('marcus_vance', 'Password@123', this)">
+                    &lt;75% Case
+                </button>
+            </div>
+
+            <!-- Status Notice -->
+            <div class="status-strip">
+                <i class="bi bi-check2-circle text-success" style="font-size: 0.95rem;"></i>
+                <span>Credentials pre-filled. Select role or click <strong>Sign In</strong>.</span>
+            </div>
+
+            <!-- Form -->
+            <form method="POST" id="loginForm" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+                <div class="form-group-custom">
+                    <label class="form-label-custom" for="identifier">Username or College Email</label>
+                    <div style="position: relative;">
+                        <i class="bi bi-person" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem;"></i>
+                        <input type="text" id="identifier" name="identifier" class="form-control-custom" style="padding-left: 2.1rem;" 
+                               placeholder="Username or email" value="{{ identifier or 'admin' }}" required autofocus>
+                    </div>
+                </div>
+
+                <div class="form-group-custom">
+                    <label class="form-label-custom" for="password">Password</label>
+                    <div style="position: relative;">
+                        <i class="bi bi-lock" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1rem;"></i>
+                        <input type="password" id="password" name="password" class="form-control-custom" style="padding-left: 2.1rem;" 
+                               placeholder="Password" value="Password@123" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn-custom btn-primary-custom" style="width: 100%; padding: 0.65rem; font-size: 0.88rem; font-weight: 600; margin-top: 0.5rem;">
+                    Sign In
+                </button>
+            </form>
+
+            <!-- 1-Click Evaluation Shortcuts -->
+            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                <div style="font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    Evaluation Accounts (1-Click Instant Login)
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem;">
+                    <div class="demo-pill" onclick="instantLogin('admin', 'Password@123')">
+                        <span>Admin Roster</span>
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <div class="demo-pill" onclick="instantLogin('prof_alan', 'Password@123')">
+                        <span>Prof. Alan (Faculty)</span>
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <div class="demo-pill" onclick="instantLogin('alex_rivera', 'Password@123')">
+                        <span>Alex (100% Student)</span>
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                    </div>
+                    <div class="demo-pill" onclick="instantLogin('marcus_vance', 'Password@123')">
+                        <span>Marcus (&lt;75% Shortage)</span>
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 0.7rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Academic Year 2026–2027 &bull; DBMS Project-Based Learning
+        </div>
+    </div>
+
+    <script>
+        function setRole(user, pass, element) {
+            document.getElementById('identifier').value = user;
+            document.getElementById('password').value = pass;
+            document.querySelectorAll('.role-tab').forEach(btn => btn.classList.remove('active'));
+            if (element) {
+                element.classList.add('active');
+            }
+        }
+
+        function instantLogin(user, pass) {
+            document.getElementById('identifier').value = user;
+            document.getElementById('password').value = pass;
+            document.getElementById('submitBtn').innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Authenticating...';
+            document.getElementById('loginForm').submit();
+        }
+    </script>
+</body>
+</html>

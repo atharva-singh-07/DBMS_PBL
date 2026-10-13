@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} — {{ app_name }}</title>
+    <meta name="description" content="AttendEase — Modern Student Attendance and Leave Approval Management System">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom Style System -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" id="appSidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('dashboard.index') }}" class="brand-wrapper">
+                    <div class="brand-icon-box">
+                        <i class="bi bi-mortarboard"></i>
+                    </div>
+                    <div>
+                        <div class="brand-title">{{ app_name }}</div>
+                        <span class="brand-subtitle">Woxsen University</span>
+                    </div>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Main Menu</div>
+                <a href="{{ url_for('dashboard.index') }}" class="nav-link-custom {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                {% if session.role in ['admin', 'faculty'] %}
+                <div class="nav-section-label">Academic Attendance</div>
+                <a href="{{ url_for('attendance.index') }}" class="nav-link-custom {% if 'attendance' in request.endpoint and request.endpoint != 'attendance.my_attendance' %}active{% endif %}">
+                    <i class="bi bi-check2-square"></i>
+                    <span>Class Attendance</span>
+                </a>
+                <a href="{{ url_for('makeup.index') }}" class="nav-link-custom {% if 'makeup' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Makeup Sessions</span>
+                </a>
+                {% endif %}
+
+                {% if session.role == 'student' %}
+                <div class="nav-section-label">My Academic Portal</div>
+                <a href="{{ url_for('attendance.my_attendance') }}" class="nav-link-custom {% if request.endpoint == 'attendance.my_attendance' %}active{% endif %}">
+                    <i class="bi bi-bar-chart-line-fill"></i>
+                    <span>My Attendance</span>
+                    {% if active_alerts_badge > 0 %}
+                    <span class="badge-count" style="margin-left: auto;">!</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('makeup.index') }}" class="nav-link-custom {% if 'makeup' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-calendar2-check"></i>
+                    <span>Makeup Classes</span>
+                </a>
+                {% endif %}
+
+                <div class="nav-section-label">Leave Management</div>
+                <a href="{{ url_for('leaves.index') }}" class="nav-link-custom {% if 'leaves' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-envelope-paper-fill"></i>
+                    <span>Leave Requests</span>
+                    {% if pending_leaves_badge > 0 %}
+                    <span class="badge-count" style="margin-left: auto;">{{ pending_leaves_badge }}</span>
+                    {% endif %}
+                </a>
+
+                {% if session.role == 'admin' %}
+                <div class="nav-section-label">Administration</div>
+                <a href="{{ url_for('students.list_students') }}" class="nav-link-custom {% if 'students' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-people-fill"></i>
+                    <span>Students</span>
+                </a>
+                <a href="{{ url_for('faculty.list_faculty') }}" class="nav-link-custom {% if 'faculty' in request.endpoint and request.endpoint != 'faculty.departments' %}active{% endif %}">
+                    <i class="bi bi-person-badge-fill"></i>
+                    <span>Faculty</span>
+                </a>
+                <a href="{{ url_for('courses.list_courses') }}" class="nav-link-custom {% if request.endpoint == 'courses.list_courses' %}active{% endif %}">
+                    <i class="bi bi-book-half"></i>
+                    <span>Courses</span>
+                </a>
+                <a href="{{ url_for('courses.list_sections') }}" class="nav-link-custom {% if 'section' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-diagram-3-fill"></i>
+                    <span>Sections & Allocations</span>
+                </a>
+                <a href="{{ url_for('faculty.departments') }}" class="nav-link-custom {% if request.endpoint == 'faculty.departments' %}active{% endif %}">
+                    <i class="bi bi-buildings-fill"></i>
+                    <span>Departments</span>
+                </a>
+                {% endif %}
+
+                {% if session.role in ['admin', 'faculty'] %}
+                <div class="nav-section-label">Analytics & Reports</div>
+                <a href="{{ url_for('reports.index') }}" class="nav-link-custom {% if 'reports' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-file-earmark-bar-graph-fill"></i>
+                    <span>SQL Reports</span>
+                </a>
+                {% endif %}
+
+                <div class="nav-section-label">Account</div>
+                <a href="{{ url_for('auth.profile') }}" class="nav-link-custom {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+                    <i class="bi bi-person-circle"></i>
+                    <span>My Profile</span>
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link-custom text-danger">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span>Sign Out</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-mini-card">
+                    <div class="user-avatar">
+                        {{ session.full_name[:1] if session.full_name else 'U' }}
+                    </div>
+                    <div>
+                        <div class="user-meta-name">{{ session.full_name or session.username }}</div>
+                        <span class="user-meta-role role-tag-{{ session.role }}">{{ session.role }}</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="app-main">
+            <!-- Top Header -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button class="mobile-toggle-btn" id="mobileToggleBtn" aria-label="Toggle navigation">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h1 class="topbar-title brand-font">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+
+                <div class="topbar-right">
+                    {% if session.role in ['admin', 'faculty'] and pending_leaves_badge > 0 %}
+                    <a href="{{ url_for('leaves.index') }}" class="topbar-notification-badge" title="Pending Leave Applications">
+                        <i class="bi bi-bell-fill"></i>
+                        <span class="badge-count">{{ pending_leaves_badge }}</span>
+                    </a>
+                    {% elif session.role == 'student' and active_alerts_badge > 0 %}
+                    <a href="{{ url_for('attendance.my_attendance') }}" class="topbar-notification-badge" title="Attendance Shortage Alert">
+                        <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                        <span class="badge-count">{{ active_alerts_badge }}</span>
+                    </a>
+                    {% endif %}
+
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        <span>{{ current_year }} Academic Term</span>
+                    </div>
+
+                    <a href="{{ url_for('auth.profile') }}" class="btn-custom btn-secondary-custom" style="padding: 0.35rem 0.8rem; font-size: 0.82rem;">
+                        <i class="bi bi-person me-1"></i> Profile
+                    </a>
+                </div>
+            </header>
+
+            <!-- Page Body Content -->
+            <main class="page-content">
+                <!-- Flash Notification Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div style="margin-bottom: 1.25rem;">
+                            {% for category, message in messages %}
+                                <div class="badge-custom badge-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else ('warning' if category == 'warning' else 'info')) }}" 
+                                     style="width: 100%; justify-content: flex-between; padding: 0.85rem 1.25rem; border-radius: var(--radius-md); font-size: 0.9rem; margin-bottom: 0.5rem; display: flex;">
+                                    <div>
+                                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-octagon-fill{% elif category == 'warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+                                        <span>{{ message }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+
+            <!-- Footer -->
+            <footer style="padding: 1.25rem 1.75rem; border-top: 1px solid var(--border-color); font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; background: #ffffff;">
+                <div>
+                    <strong>AttendEase</strong> &copy; {{ current_year }} — Student Attendance & Leave Approval System.
+                </div>
+                <div>
+                    College DBMS Project &bull; Standard Threshold: {{ default_threshold }}%
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Interactive Client JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

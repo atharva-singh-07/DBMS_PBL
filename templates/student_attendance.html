@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}My Attendance{% endblock %}
+{% block page_title %}My Course Attendance & Academic Records{% endblock %}
+
+{% block content %}
+<!-- Active Shortage Alert Notification -->
+{% if alerts %}
+    {% for alert in alerts %}
+    <div class="shortage-banner">
+        <div class="shortage-banner-icon">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <div style="flex-grow: 1;">
+            <div style="font-weight: 700; color: #991b1b; font-size: 1.05rem;">
+                ATTENDANCE SHORTAGE NOTICE: {{ alert.course_code }} ({{ alert.section_name }})
+            </div>
+            <p style="font-size: 0.88rem; color: #7f1d1d; margin-top: 0.25rem;">
+                Your attendance is <strong>{{ alert.current_percentage }}%</strong>, which is below the mandatory requirement of <strong>{{ alert.threshold_percentage }}%</strong>.
+                You have attended {{ alert.classes_attended }} lectures and missed {{ alert.classes_missed }}. You are at risk of being debarred from the final term examinations. Please attend upcoming makeup sessions.
+            </p>
+        </div>
+        <a href="{{ url_for('makeup.index') }}" class="btn-custom btn-secondary-custom" style="white-space: nowrap;">
+            <i class="bi bi-clock-history me-1"></i> View Makeup Classes
+        </a>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Course-wise Cards Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
+    {% for course in courses %}
+    <div class="card-custom" style="margin-bottom: 0;">
+        <div class="card-header-flex">
+            <div>
+                <span class="badge-custom badge-secondary" style="font-weight: 700;">{{ course.course_code }}</span>
+                <h3 style="font-size: 1.1rem; margin-top: 0.35rem;">{{ course.course_title }}</h3>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    Section: {{ course.section_name }} &bull; {{ course.faculty_name }}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1.6rem; font-weight: 700; color: {% if course.attendance_percentage >= threshold %}var(--success){% else %}var(--danger){% endif %}; line-height: 1;">
+                    {{ course.attendance_percentage }}%
+                </div>
+                <span class="badge-custom {% if course.attendance_percentage >= threshold %}badge-success{% else %}badge-danger{% endif %}" style="margin-top: 0.3rem;">
+                    {% if course.attendance_percentage >= threshold %}In Good Standing{% else %}Shortage Alert{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+            <div style="height: 100%; width: {{ course.attendance_percentage }}%; background: {% if course.attendance_percentage >= threshold %}var(--success){% else %}var(--danger){% endif %};"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; text-align: center; background: #f8fafc; padding: 0.75rem; border-radius: var(--radius-md);">
+            <div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Total</div>
+                <div style="font-weight: 700; font-size: 1.1rem;">{{ course.total_counted_classes }}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Present</div>
+                <div style="font-weight: 700; font-size: 1.1rem; color: var(--success);">{{ course.present_count }}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Absent</div>
+                <div style="font-weight: 700; font-size: 1.1rem; color: var(--danger);">{{ course.absent_count }}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Leave</div>
+                <div style="font-weight: 700; font-size: 1.1rem; color: var(--warning);">{{ course.leave_count }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Detailed Session History Log -->
+<div class="card-custom">
+    <div class="card-header-flex">
+        <div>
+            <h2 class="card-title">Class Session Attendance History</h2>
+            <div class="card-subtitle">Chronological record of every lecture marked by your course instructors</div>
+        </div>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Course</th>
+                    <th>Lecture Topic</th>
+                    <th>Type</th>
+                    <th>Instructor</th>
+                    <th>Your Status</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in history %}
+                <tr>
+                    <td>
+                        <strong>{{ log.session_date|format_date }}</strong>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ log.start_time|format_time }} – {{ log.end_time|format_time }}</div>
+                    </td>
+                    <td>
+                        <strong>{{ log.course_code }}</strong> ({{ log.section_name }})
+                    </td>
+                    <td>{{ log.topic or 'Lecture Session' }}</td>
+                    <td><span class="badge-custom badge-secondary">{{ log.session_type }}</span></td>
+                    <td>{{ log.faculty_name }}</td>
+                    <td>
+                        {% if log.status == 'present' %}
+                        <span class="badge-custom badge-success"><i class="bi bi-check-lg"></i> Present</span>
+                        {% elif log.status == 'absent' %}
+                        <span class="badge-custom badge-danger"><i class="bi bi-x-lg"></i> Absent</span>
+                        {% else %}
+                        <span class="badge-custom badge-warning"><i class="bi bi-heart-pulse"></i> Leave</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.remarks or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No attendance logs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Attendance Policy Explanation Card -->
+<div class="card-custom" style="background: #f8fafc; border: 1px dashed var(--border-color);">
+    <h3 style="font-size: 1rem; font-weight: 700; color: var(--primary-navy); margin-bottom: 0.5rem;">
+        <i class="bi bi-info-circle-fill text-primary me-2"></i> Official Attendance Counting Policy
+    </h3>
+    <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6;">
+        &bull; <strong>Formula:</strong> <code>Attendance Percentage = (Number of Present Classes / Total Counted Classes) &times; 100</code>.<br>
+        &bull; <strong>Total Counted Classes:</strong> Encompasses all held regular, extra, and laboratory sessions marked as Present, Absent, or Leave.<br>
+        &bull; <strong>Approved Leave:</strong> Approved leaves are formally excused and reflected under Leave records; faculty can take them into account for shortage condonation.<br>
+        &bull; <strong>Makeup Sessions:</strong> Participation in scheduled makeup classes provides instructional recovery and is tracked in the Makeup Attendance register.
+    </p>
+</div>
+{% endblock %}
