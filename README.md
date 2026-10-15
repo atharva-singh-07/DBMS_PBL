@@ -7,7 +7,7 @@
 ![Flask](https://img.shields.io/badge/Flask-3.1-black?logo=flask)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange?logo=mysql&logoColor=white)
 ![License](https://img.shields.io/badge/License-Academic-green)
-![GitHub](https://img.shields.io/badge/GitHub-atvaholic-07%2FDBMS__PBL-181717?logo=github)
+[![GitHub](https://img.shields.io/badge/GitHub-atharva--singh--07%2FDBMS__PBL-181717?logo=github&logoColor=white)](https://github.com/atharva-singh-07/DBMS_PBL)
 
 ---
 
