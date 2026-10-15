@@ -231,4 +231,4 @@ Tests cover 9 core categories:
 
 **Developed for the College Database Management System (DBMS) Project**
 **Author:** Atharva Singh
-**Repository:** [github.com/atvaholic/DBMS_PBL](https://github.com/atvaholic/DBMS_PBL)
+**Repository:** [github.com/atharva-singh-07/DBMS_PBL](https://github.com/atharva-singh-07/DBMS_PBL)
